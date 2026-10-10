@@ -202,7 +202,7 @@ footer a{color:var(--text-muted);cursor:pointer;margin-left:8px;opacity:.6}
 <span class="section-tag">// FEATURED PROTOTYPES</span><h2 class="section-title">Engineering Portfolio</h2>
 <p class="section-sub">Projects shared by our team and clients. New submissions go live only after admin approval.</p>
 </div>
-<div id="adminPanel"><h3><i class="fa-solid fa-user-shield"></i> Admin Panel <button class="btn-secondary btn-sm" style="float:right" onclick="adminLogout()">Logout</button></h3><div class="adm-bar" style="justify-content:flex-start;margin:0 0 1rem"><button class="btn-secondary btn-sm" onclick="openEst()">Edit Estimator &amp; Prices</button><button class="btn-secondary btn-sm" onclick="addSvc()">Add Core Service</button><button class="btn-secondary btn-sm" onclick="addMember()">Add Team Member</button><button class="btn-secondary btn-sm" onclick="addPart()">Add Partner Logo</button></div><h4 class="adm-h" id="supH">Customer Support Messages</h4><div id="supList"></div><h4 class="adm-h" id="propH">Client Proposals</h4><div id="propList"></div><h4 class="adm-h" id="revH">Pending Client Reviews</h4><div id="revList"></div><h4 class="adm-h">Pending Portfolio Projects</h4><div id="pendingList"></div></div>
+<div id="adminPanel"><h3><i class="fa-solid fa-user-shield"></i> Admin Panel <button class="btn-secondary btn-sm" style="float:right" onclick="adminLogout()">Logout</button></h3><div class="adm-bar" style="justify-content:flex-start;margin:0 0 1rem"><button class="btn-secondary btn-sm" onclick="openEst()">Edit Estimator &amp; Prices</button><button class="btn-secondary btn-sm" onclick="addSvc()">Add Core Service</button><button class="btn-secondary btn-sm" onclick="addMember()">Add Team Member</button><button class="btn-secondary btn-sm" onclick="addPart()">Add Partner Logo</button><button class="btn-ok" onclick="exportData()">Export Site Data (publish)</button><button class="btn-secondary btn-sm" onclick="importData()">Import Site Data</button></div><h4 class="adm-h" id="supH">Customer Support Messages</h4><div id="supList"></div><h4 class="adm-h" id="propH">Client Proposals</h4><div id="propList"></div><h4 class="adm-h" id="revH">Pending Client Reviews</h4><div id="revList"></div><h4 class="adm-h">Pending Portfolio Projects</h4><div id="pendingList"></div></div>
 <div class="portfolio-filter" id="filters"></div>
 <div class="upload-bar">
 <button class="btn-primary" onclick="openUpload()"><i class="fa-solid fa-upload"></i> Upload Your Project</button>
@@ -575,7 +575,19 @@ save(a);closeUpload();render();
 alert(pId?'Project updated.':isAdmin?'Project added and live.':'Thank you! Your project was submitted and will go live after admin approval.')});
 $('uploadModal').addEventListener('click',e=>{if(e.target.id==='uploadModal')closeUpload()});
 
-render();renderEst();renderFooter();
+/* ---------- Publish admin changes to GitHub: Export -> upload site-data.json next to index.html ---------- */
+const PUB_KEYS=['tf_p','tf_t','tf_est','tf_svc','tf_part','tf_rev'];
+function exportData(){const d={__v:Date.now()};
+PUB_KEYS.forEach(k=>{let v=ls(k,null);if(v===null)return;if(k==='tf_p'||k==='tf_rev')v=v.filter(x=>x.status==='approved');d[k]=v});
+const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(d)],{type:'application/json'}));a.download='site-data.json';a.click();
+alert('site-data.json downloaded. Upload it to your GitHub repository (same folder as index.html), replacing the old one.')}
+function importData(){const i=document.createElement('input');i.type='file';i.accept='.json';i.onchange=()=>{const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);PUB_KEYS.forEach(k=>{if(d[k])lsSet(k,d[k])});location.reload()}catch(e){alert('This is not a valid site-data.json file.')}};r.readAsText(i.files[0])};i.click()}
+async function syncPublished(){try{const r=await fetch('site-data.json?v='+Date.now());if(!r.ok)return;const d=await r.json();
+if(localStorage.getItem('tf_pub')===String(d.__v))return;
+PUB_KEYS.forEach(k=>{if(!d[k])return;let v=d[k];if(k==='tf_p'||k==='tf_rev')v=v.concat(ls(k,[]).filter(x=>x.status==='pending'));lsSet(k,v)});
+localStorage.setItem('tf_pub',String(d.__v));render();renderEst()}catch(e){}}
+
+render();renderEst();renderFooter();syncPublished();
 </script>
-</body>
+</body>s
 </html>
